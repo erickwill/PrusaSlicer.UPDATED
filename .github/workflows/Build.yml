@@ -84,7 +84,7 @@ jobs:
       if: steps.Check_Releases.outputs.skip == 'false'
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: Auto-Commit
+        commit_message: Auto-Commit (cache changes)
         repository: ${{ env.THIS_REPO_DIR }}
 
     - name: Clone the PrusaSlicer repository

@@ -2,7 +2,7 @@
 
 ### Preface
 
-This repository is based on the "proof of concept" by probonopd (see: his repository [here](https://github.com/probonopd/PrusaSlicer.AppImage), as well as the discussion about it [here](https://github.com/prusa3d/PrusaSlicer/issues/13653)). Because probonopd mentioned somewhere that he is nnot willing to keep his repository alive, I forked it and made some (bigger) changes so that it will build a new release whenever prusa publish a new release.
+This repository is based on the "proof of concept" by probonopd (see: his repository [here](https://github.com/probonopd/PrusaSlicer.AppImage), as well as the discussion about it [here](https://github.com/prusa3d/PrusaSlicer/issues/13653)). Because probonopd mentioned somewhere that he is not willing to keep his repository alive, I forked it and made some (bigger) changes so that it will build a new release whenever prusa publish a new release.
 
 ### Download
 
