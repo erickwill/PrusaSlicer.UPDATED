@@ -1,0 +1,124 @@
+name: Build PrusaSlicer AppImage
+on:
+  workflow_dispatch:
+  push:
+  schedule:
+    - cron: '0 1 * * *' # every Day at 01:00
+permissions:
+  actions: write
+  contents: write
+defaults:
+  run:
+    shell: bash
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    #timeout-minutes: 180
+    steps:
+    - name: Setup Env
+      run: |
+        #set -x
+        THIS_REPO_DIR=${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}
+        APT_CACHE_DIR=${THIS_REPO_DIR}/cache/var/cache/apt
+        TOOLS_DIR=${THIS_REPO_DIR}/.github/tools
+        PRUSA_REPO_DIR=${GITHUB_WORKSPACE}/PrusaSlicer
+
+        for i in THIS_REPO_DIR APT_CACHE_DIR TOOLS_DIR PRUSA_REPO_DIR; do
+          eval "r=\"\$$i\""
+          echo "$i=$r" >> $GITHUB_ENV
+        done
+
+    - name: Check Releases and Skip Rest of Job if no new release
+      id: Check_Releases
+      run: |
+        set -x
+        set -v
+        GetReleases()
+         {
+          list=$(gh release list -R "$1" --json tagName | jq -r 'map(select(true))[] | (.tagName)' | sed s/version_//g)
+          tmpfile=mktemp
+          touch $tmpfile
+          for i in $list; do
+            if [[ $i != *-* ]] && dpkg --compare-versions $i "ge" "2.9"; then 
+              echo $i >>$tmpfile
+            fi
+          done
+          sort <$tmpfile >$2
+          rm -f $tmpfile
+         }
+         
+        THIS_REPO=$GITHUB_REPOSITORY
+        PRUSA_REPO=prusa3d/PrusaSlicer
+        
+        cd "$GITHUB_WORKSPACE"
+        GetReleases "$PRUSA_REPO" "./Prusa.Releases"
+        GetReleases "$THIS_REPO" "./This.Releases"
+        VERSION=$(head -1 <<< "$(comm -23 Prusa.Releases This.Releases)")
+        rm -f "./Prusa.Releases" "./This.Releases"
+        
+        if [ -z "${VERSION}" ]; then
+          echo "No new release found. Skipping rest of workflow."
+          echo "skip=true" >> $GITHUB_OUTPUT
+         else
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=version_${VERSION}" >> $GITHUB_OUTPUT
+          echo "New release found: ${VERSION}"
+          echo "skip=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Clone this repository
+      if: steps.Check_Releases.outputs.skip == 'false'
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        path: '${{ env.THIS_REPO_DIR }}'
+
+    - name: Mod Apt
+      if: steps.Check_Releases.outputs.skip == 'false'
+      run: |
+        $TOOLS_DIR/ModApt.sh
+
+    - name: Commit all changed files back to the repository
+      if: steps.Check_Releases.outputs.skip == 'false'
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Auto-Commit
+        repository: ${{ env.THIS_REPO_DIR }}
+
+    - name: Clone the PrusaSlicer repository
+      if: steps.Check_Releases.outputs.skip == 'false'
+      uses: actions/checkout@v4
+      with:
+        repository: prusa3d/PrusaSlicer
+        ref: '${{ steps.Check_Releases.outputs.VERSION }}'
+        path: '${{ env.PRUSA_REPO_DIR }}'
+
+    - name: PrepareForBuild
+      if: steps.Check_Releases.outputs.skip == 'false'
+      run: |
+        $TOOLS_DIR/PrepareForBuild.sh
+
+    - name: BuildDependencies
+      if: steps.Check_Releases.outputs.skip == 'false'
+      run: |
+        mkdir -p "$PRUSA_REPO_DIR/deps/build"
+        cd "$PRUSA_REPO_DIR/deps/build"
+        cmake .. -DDEP_WX_GTK3=ON -DDEP_DOWNLOAD_DIR=$(pwd)/../download -DBOOST_ROOT=$(pwd)/../build/destdir/usr/local
+        make -j $(nproc)
+
+    - name: BuildPrusaSlicer
+      if: steps.Check_Releases.outputs.skip == 'false'
+      run: |
+        mkdir -p "$PRUSA_REPO_DIR/build"
+        cd "$PRUSA_REPO_DIR/build"
+        cmake .. -DSLIC3R_STATIC=1 -DSLIC3R_GTK=3 -DSLIC3R_PCH=OFF -DCMAKE_PREFIX_PATH=$(pwd)/../deps/build/destdir/usr/local -DCMAKE_INSTALL_PREFIX=/usr
+        make -j $(nproc)
+        sudo make install
+
+    - name: MakeAppImage
+      if: steps.Check_Releases.outputs.skip == 'false'
+      run: |
+        $TOOLS_DIR/MakeAppImage.sh
+
