@@ -10,6 +10,7 @@ Latest: [Download](/../../releases/latest)
 
 All Releases: [Releases](/../../releases)
 
+[![Build PrusaSlicer AppImage](https://github.com/gneiss15/PrusaSlicer.AppImage/actions/workflows/Build.yml/badge.svg)](https://github.com/gneiss15/PrusaSlicer.AppImage/actions/workflows/Build.yml)
 ## All Below is from the original Repo of probonopd
 
 ### Background
