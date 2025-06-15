@@ -33,8 +33,8 @@ jobs:
     - name: Check Releases and Skip Rest of Job if no new release
       id: Check_Releases
       run: |
-        set -x
-        set -v
+        #set -x
+        #set -v
         GetReleases()
          {
           list=$(gh release list -R "$1" --json tagName | jq -r 'map(select(true))[] | (.tagName)' | sed s/version_//g)
