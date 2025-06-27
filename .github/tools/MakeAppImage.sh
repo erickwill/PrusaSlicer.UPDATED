@@ -84,7 +84,7 @@ cd "${THIS_REPO_DIR}"
 ../appimagetool -n -u "$UPINFO" "$APP_DIR" "${THIS_REPO_DIR}/${PACKAGE}-${VERSION}-${ARCH}_GN.AppImage"
 
 # Upload to GitHub Releases
-list=$(gh release list -R "$1" --json tagName | jq -r 'map(select(true))[] | (.tagName)');
+list=$(gh release list -R $GITHUB_REPOSITORY" --json tagName | jq -r 'map(select(true))[] | (.tagName)');
 for i in $list; do
   if [ "$i" = "${VERSION}" ]; then
     gh release delete $VERSION -y
