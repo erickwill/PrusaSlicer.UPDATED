@@ -12,6 +12,8 @@ All Releases: [Releases](/../../releases)
 
 [![Build PrusaSlicer AppImage](https://github.com/gneiss15/PrusaSlicer.AppImage/actions/workflows/Build.yml/badge.svg)](https://github.com/gneiss15/PrusaSlicer.AppImage/actions/workflows/Build.yml)
 ## All Below is from the original Repo of probonopd
+<details>
+  <summary>Show</summary>
 
 ### Background
 
@@ -87,3 +89,5 @@ Luckily, it's not either-or: AppImage and Flatpak serve different purposes for d
 * https://github.com/prusa3d/PrusaSlicer/issues/12984 (libwebkit2gtk-4.0 is now bundled)
 * https://github.com/prusa3d/PrusaSlicer/issues/12835 (libwebkit2gtk-4.0 is now bundled)
 * https://github.com/prusa3d/PrusaSlicer/issues/12922 (_all_ libraries are now bundled)
+</details>
+
