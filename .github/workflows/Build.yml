@@ -39,7 +39,7 @@ jobs:
         GetReleases()
          {
           list=$(gh release list -R "$1" --json tagName | jq -r 'map(select(true))[] | (.tagName)' | sed s/version_//g)
-          tmpfile=mktemp
+          tmpfile=$(mktemp)
           touch $tmpfile
           for i in $list; do
             if [[ $i != *-* ]] && dpkg --compare-versions $i "ge" "2.9"; then 
@@ -58,7 +58,7 @@ jobs:
         VERSION=$(head -1 <<< "$(comm -23 Prusa.Releases This.Releases)")
         rm -f "./Prusa.Releases" "./This.Releases"
         
-        if [ -z "${VERSION}" ]; then
+        if [[ -z "${VERSION}" ]]; then
           echo "No new release found. Skipping rest of workflow."
           echo "skip=true" >> $GITHUB_OUTPUT
          else
