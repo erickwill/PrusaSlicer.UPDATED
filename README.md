@@ -10,7 +10,7 @@ Latest: [Download](/../../releases/latest)
 
 All Releases: [Releases](/../../releases)
 
-[![Build PrusaSlicer AppImage](../../actions/workflows/Build.yml/badge.svg)](../../actions/workflows/Build.yml)
+[![Build PrusaSlicer AppImage](../../actions/workflows/BuildRelease.yml/badge.svg)](../../actions/workflows/BuildRelease.yml)
 ## All Below is from the original Repo of probonopd
 <details>
   <summary>Show</summary>

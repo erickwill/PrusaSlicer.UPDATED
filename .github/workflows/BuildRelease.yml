@@ -1,0 +1,115 @@
+name: Build PrusaSlicer AppImage
+run-name: Build PrusaSlicer AppImage release ${{ inputs.version }}
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        type: string  
+permissions:
+  actions: write
+  contents: write
+defaults:
+  run:
+    shell: bash
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+concurrency:
+  group: build-${{ inputs.version }}
+  cancel-in-progress: false  
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    #timeout-minutes: 180
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+    - name: Build release ${{ inputs.version }}
+      run: |
+        #set -x
+        #set -v
+        echo "Building release for $VERSION"
+
+        PRUSA_VERSION="version_${VERSION}"
+        THIS_REPO_DIR=${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}
+        APT_CACHE_DIR=${THIS_REPO_DIR}/cache/var/cache/apt
+        TOOLS_DIR=${THIS_REPO_DIR}/.github/tools
+        PRUSA_REPO_DIR=${GITHUB_WORKSPACE}/PrusaSlicer
+
+        for i in VERSION PRUSA_VERSION THIS_REPO_DIR APT_CACHE_DIR TOOLS_DIR PRUSA_REPO_DIR; do
+          eval "r=\"\$$i\""
+          echo "$i=$r" >> $GITHUB_ENV
+        done
+    
+    - name: Clone this repository
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        path: '${{ env.THIS_REPO_DIR }}'
+
+    - name: Mod Apt
+      run: |
+        $TOOLS_DIR/ModApt.sh
+
+    - name: Commit all changed files back to the repository
+      uses: stefanzweifel/git-auto-commit-action@v6
+      with:
+        commit_message: Auto-Commit (cache changes)
+        repository: ${{ env.THIS_REPO_DIR }}
+
+    - name: Clone the PrusaSlicer repository
+      uses: actions/checkout@v4
+      with:
+        repository: prusa3d/PrusaSlicer
+        ref: '${{ env.PRUSA_VERSION }}'
+        path: '${{ env.PRUSA_REPO_DIR }}'
+
+    - name: PrepareForBuild
+      run: |
+        $TOOLS_DIR/PrepareForBuild.sh
+
+    - name: BuildDependencies
+      run: |
+        mkdir -p "$PRUSA_REPO_DIR/deps/build"
+        cd "$PRUSA_REPO_DIR/deps/build"
+        cmake .. -DDEP_WX_GTK3=ON -DDEP_DOWNLOAD_DIR=$(pwd)/../download -DBOOST_ROOT=$(pwd)/../build/destdir/usr/local
+        make -j $(nproc)
+
+    - name: BuildPrusaSlicer
+      run: |
+        mkdir -p "$PRUSA_REPO_DIR/build"
+        cd "$PRUSA_REPO_DIR/build"
+        cmake .. -DSLIC3R_STATIC=1 -DSLIC3R_GTK=3 -DSLIC3R_PCH=OFF -DCMAKE_PREFIX_PATH=$(pwd)/../deps/build/destdir/usr/local -DCMAKE_INSTALL_PREFIX=/usr
+        make -j $(nproc)
+        sudo make install
+
+    - name: MakeAppImage
+      run: |
+        $TOOLS_DIR/MakeAppImage.sh
+
+    - name: Set build time
+      run: echo "BUILD_TIME=$(date -u +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+
+    - name: Send success mail
+      if: success()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.web.de
+        server_port: 587
+        username: ${{ secrets.MAIL_USER }}
+        password: ${{ secrets.MAIL_PASS }}
+        subject: ✅ PrusaSlicer.AppImage Build for Version ${{ env.VERSION }} erfolgreich
+        body: |
+          Der Build für PrusaSlicer.AppImage Version ${{ env.VERSION }} wurde erfolgreich abgeschlossen.
+          Zeit: ${{ env.BUILD_TIME }}
+          Repository: ${{ github.repository }}
+        to: ${{ secrets.MAIL_USER }}
+        from: GitHub Actions via Web.de <${{ secrets.MAIL_USER }}>
+
+    - name: Trigger CheckReleases again
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh workflow run -R "$GITHUB_REPOSITORY" CheckReleases.yml --ref main
+

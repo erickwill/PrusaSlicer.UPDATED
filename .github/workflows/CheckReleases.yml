@@ -1,0 +1,60 @@
+name: CheckReleases
+run-name: CheckReleases
+on:
+  workflow_dispatch:
+  push:
+  schedule:
+    - cron: '0 3 * * *'  # täglich 03:00 Uhr
+defaults:
+  run:
+    shell: bash
+env:
+  GH_TOKEN: ${{ secrets.PAD }}
+  REPO: ${{ github.repository }}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Releases and Dispatch Build if (at least one) new release
+      id: Check_Releases
+      run: |
+        #set -x
+        #set -v
+        set -euo pipefail
+        
+        GetReleases()
+         {
+          list=$(gh release list -R "$1" --json tagName | jq -r 'map(select(true))[] | (.tagName)' | sed 's/version_//g')
+          tmpfile=$(mktemp)
+          touch $tmpfile
+          for i in $list; do
+            if [[ $i != *-* ]] && dpkg --compare-versions $i "ge" "2.9"; then 
+              echo $i >>$tmpfile
+            fi
+          done
+          sort <$tmpfile >$2
+          rm -f $tmpfile
+         }
+         
+        PRUSA_REPO=prusa3d/PrusaSlicer
+        
+        cd "$GITHUB_WORKSPACE"
+        GetReleases "$PRUSA_REPO" "./Prusa.Releases"
+        GetReleases "$GITHUB_REPOSITORY" "./This.Releases"
+        VERSION=$(head -1 <<< "$(comm -23 Prusa.Releases This.Releases)")
+        rm -f "./Prusa.Releases" "./This.Releases"
+
+        # Check if a workflow run for workflow BuildRelease.yml is in progress
+        IS_RUNNING=$(gh run list -R "$GITHUB_REPOSITORY" --workflow BuildRelease.yml --status in_progress --json status --jq 'length')
+        if [[ "$IS_RUNNING" -gt 0 ]]; then
+          echo "Build for version $VERSION is already running. Skipping dispatch."
+          exit 0
+        fi
+        
+        if [[ -z "${VERSION}" ]]; then
+          echo "No new release found. do not Dispatch Build."
+         else
+          echo "New release found: $VERSION"
+          gh workflow run -R "$GITHUB_REPOSITORY" BuildRelease.yml -F version="$VERSION"
+        fi
+
