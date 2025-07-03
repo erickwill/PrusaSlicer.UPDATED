@@ -11,6 +11,10 @@ Latest: [Download](/../../releases/latest)
 All Releases: [Releases](/../../releases)
 
 [![Build PrusaSlicer AppImage](../../actions/workflows/BuildRelease.yml/badge.svg)](../../actions/workflows/BuildRelease.yml)
+
+### Remark
+Due to my Commit "Switch to separate Jobs", if You fork this repo, You must set 3 secrects: MAIL_PASS, MAIL_USER and PAD.
+
 ## All Below is from the original Repo of probonopd
 <details>
   <summary>Show</summary>
