@@ -2,9 +2,10 @@ name: CheckReleases
 run-name: CheckReleases
 on:
   workflow_dispatch:
-  push:
+  #push:
   schedule:
-    - cron: '0 3 * * *'  # täglich 03:00 Uhr
+    - cron: '20 0 1/7 * *' # every every 7th Day of Month at 00:20
+    #- cron: '20 0 * * *' # every Day at 00:20
 defaults:
   run:
     shell: bash
